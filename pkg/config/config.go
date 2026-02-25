@@ -192,6 +192,7 @@ type ChannelsConfig struct {
 	OneBot   OneBotConfig   `json:"onebot"`
 	WeCom    WeComConfig    `json:"wecom"`
 	WeComApp WeComAppConfig `json:"wecom_app"`
+	XMPP     XMPPConfig     `json:"xmpp"`
 }
 
 type WhatsAppConfig struct {
@@ -294,6 +295,16 @@ type WeComAppConfig struct {
 	WebhookPath    string              `json:"webhook_path"     env:"PICOCLAW_CHANNELS_WECOM_APP_WEBHOOK_PATH"`
 	AllowFrom      FlexibleStringSlice `json:"allow_from"       env:"PICOCLAW_CHANNELS_WECOM_APP_ALLOW_FROM"`
 	ReplyTimeout   int                 `json:"reply_timeout"    env:"PICOCLAW_CHANNELS_WECOM_APP_REPLY_TIMEOUT"`
+}
+
+type XMPPConfig struct {
+	Enabled   bool                `json:"enabled"    env:"PICOCLAW_CHANNELS_XMPP_ENABLED"`
+	Server    string              `json:"server"      env:"PICOCLAW_CHANNELS_XMPP_SERVER"`
+	Port      int                 `json:"port"        env:"PICOCLAW_CHANNELS_XMPP_PORT"`
+	Username  string              `json:"username"    env:"PICOCLAW_CHANNELS_XMPP_USERNAME"`
+	Password  string              `json:"password"    env:"PICOCLAW_CHANNELS_XMPP_PASSWORD"`
+	Resource  string              `json:"resource"    env:"PICOCLAW_CHANNELS_XMPP_RESOURCE"`
+	AllowFrom FlexibleStringSlice `json:"allow_from"  env:"PICOCLAW_CHANNELS_XMPP_ALLOW_FROM"`
 }
 
 type HeartbeatConfig struct {
