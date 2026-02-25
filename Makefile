@@ -11,10 +11,11 @@ VERSION?=$(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 GIT_COMMIT=$(shell git rev-parse --short=8 HEAD 2>/dev/null || echo "dev")
 BUILD_TIME=$(shell date +%FT%T%z)
 GO_VERSION=$(shell $(GO) version | awk '{print $$3}')
-LDFLAGS=-ldflags "-X main.version=$(VERSION) -X main.gitCommit=$(GIT_COMMIT) -X main.buildTime=$(BUILD_TIME) -X main.goVersion=$(GO_VERSION) -s -w"
+INTERNAL=github.com/sipeed/picoclaw/cmd/picoclaw/internal
+LDFLAGS=-ldflags "-X $(INTERNAL).version=$(VERSION) -X $(INTERNAL).gitCommit=$(GIT_COMMIT) -X $(INTERNAL).buildTime=$(BUILD_TIME) -X $(INTERNAL).goVersion=$(GO_VERSION) -s -w"
 
 # Go variables
-GO?=go
+GO?=CGO_ENABLED=0 go
 GOFLAGS?=-v -tags stdjson
 
 # Golangci-lint
@@ -144,6 +145,10 @@ fmt:
 lint:
 	@$(GOLANGCI_LINT) run
 
+## fix: Fix linting issues
+fix:
+	@$(GOLANGCI_LINT) run --fix
+
 ## deps: Download dependencies
 deps:
 	@$(GO) mod download
@@ -169,7 +174,7 @@ help:
 	@echo "  make [target]"
 	@echo ""
 	@echo "Targets:"
-	@grep -E '^## ' $(MAKEFILE_LIST) | sed 's/## /  /'
+	@grep -E '^## ' $(MAKEFILE_LIST) | sort | awk -F': ' '{printf "  %-16s %s\n", substr($$1, 4), $$2}'
 	@echo ""
 	@echo "Examples:"
 	@echo "  make build              # Build for current platform"
