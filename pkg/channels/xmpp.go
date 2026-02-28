@@ -1,7 +1,9 @@
 package channels
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"sync"
@@ -170,12 +172,15 @@ func (c *XMPPChannel) Send(ctx context.Context, msg bus.OutboundMessage) error {
 		return fmt.Errorf("xmpp channel not connected")
 	}
 
+	// 确保消息内容是有效的UTF-8编码
+	content := msg.Content
+
 	// 创建XMPP消息
 	xmppMsg := stanza.Message{
 		Attrs: stanza.Attrs{
 			To: msg.ChatID,
 		},
-		Body: msg.Content,
+		Body: content,
 	}
 
 	// 发送消息
@@ -190,7 +195,7 @@ func (c *XMPPChannel) Send(ctx context.Context, msg bus.OutboundMessage) error {
 
 	logger.DebugCF("channels", "XMPP message sent successfully", map[string]any{
 		"to":      msg.ChatID,
-		"content": msg.Content,
+		"content": content,
 	})
 
 	return nil
@@ -218,9 +223,19 @@ func (c *XMPPChannel) handleMessage(s xmpp.Sender, p stanza.Packet) {
 	}
 
 	sender := msg.From
+	// 解码 Unicode 转义序列
+	decodedBody, err := decodeUnicodeEscapes(msg.Body)
+	if err != nil {
+		logger.WarnCF("channels", "Failed to decode Unicode escapes", map[string]any{
+			"error":    err.Error(),
+			"original": msg.Body,
+		})
+		decodedBody = msg.Body
+	}
+
 	logger.InfoCF("channels", "Received XMPP message", map[string]any{
 		"sender":  sender,
-		"content": msg.Body,
+		"content": decodedBody,
 		"server":  c.config.Server,
 	})
 
@@ -251,7 +266,7 @@ func (c *XMPPChannel) handleMessage(s xmpp.Sender, p stanza.Packet) {
 		Channel:  c.Name(),
 		ChatID:   sender,
 		SenderID: sender,
-		Content:  msg.Body,
+		Content:  decodedBody,
 		Metadata: map[string]string{
 			"server": c.config.Server,
 			"user":   c.config.Username,
@@ -262,8 +277,18 @@ func (c *XMPPChannel) handleMessage(s xmpp.Sender, p stanza.Packet) {
 	c.bus.PublishInbound(inboundMsg)
 	logger.DebugCF("channels", "Message sent to bus", map[string]any{
 		"sender":  sender,
-		"content": msg.Body,
+		"content": decodedBody,
 	})
+}
+
+// decodeUnicodeEscapes 解码 Unicode 转义序列
+func decodeUnicodeEscapes(s string) (string, error) {
+	var buf bytes.Buffer
+	err := json.Unmarshal([]byte(`"`+s+`"`), &buf)
+	if err != nil {
+		return s, err
+	}
+	return buf.String(), nil
 }
 
 // isAuthorized 检查用户是否有权限
